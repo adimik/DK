@@ -1,0 +1,67 @@
+// ==UserScript==
+// @name         AutoPozadaniSurovin
+// @namespace    http://tampermonkey.net/
+// @version      0.3
+// @description  Automaticky požádá o suroviny z vesnic jedním kliknutím na hlavní "Požádat" a poté "Poslat suroviny" po náhodném intervalu
+// @author       
+// @match        https://cs99.divokekmeny.cz/game.php?*screen=market&mode=call*
+// @grant        GM_setValue
+// @grant        GM_getValue
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    let active = GM_getValue("resourceRequesting", false);
+
+    // Přidání ovládacího panelu na stránku
+    let html = active ?
+    `<div style="margin-top:10px;">
+        <h1 style="color: red;">Žádání o suroviny je aktivní!</h1>
+        <div>Za chvilku budou zažádány suroviny ze všech vesnic.</div>
+        <div><button id="deactivate-btn" class="btn">Deaktivovat</button></div>
+    </div>`
+    :
+    `<div style="margin-top:10px;">
+        <h1>Žádání o suroviny není aktivní</h1>
+        <div><button id="activate-btn" class="btn">Aktivovat</button></div>
+    </div>`;
+
+    $("#content_value").append(html);
+
+    $("#activate-btn").click(() => {
+        GM_setValue("resourceRequesting", true);
+        location.reload();
+    });
+
+    $("#deactivate-btn").click(() => {
+        GM_setValue("resourceRequesting", false);
+        location.reload();
+    });
+
+    if (active) {
+        // Náhodný interval mezi 40 a 80 vteřinami
+        let timeoutSeconds = 40 + Math.random() * 40;
+        setTimeout(() => {
+            // Najdeme hlavní checkbox v hlavičce tabulky obsahující text "Požádat"
+            let mainCheckbox = $("th:contains('Požádat')").find("input[type='checkbox']").first();
+
+            if (mainCheckbox.length > 0) {
+                // Klikneme na hlavní checkbox, což by mělo zaškrtnout všechny vesnice
+                mainCheckbox.trigger('click');
+
+                // Klikneme na tlačítko "Poslat suroviny"
+                let sendButton = $("input[type='submit'][value='Poslat suroviny']");
+                if (sendButton.length > 0) {
+                    sendButton[0].click();
+                } else {
+                    // Pokud se nenašlo tlačítko, obnovíme stránku a zkusíme to příště
+                    location.reload();
+                }
+            } else {
+                // Nenalezli jsme checkbox, obnovíme stránku a zkusíme znovu
+                location.reload();
+            }
+        }, timeoutSeconds * 1000);
+    }
+})();
